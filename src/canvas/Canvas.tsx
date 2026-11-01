@@ -1,10 +1,11 @@
 import { useCallback, useState, type MouseEvent, type PointerEvent } from 'react'
-import { Background, BackgroundVariant, MiniMap, ReactFlow, type NodeTypes } from '@xyflow/react'
+import { Background, BackgroundVariant, MiniMap, ReactFlow, SelectionMode, type NodeTypes } from '@xyflow/react'
 import { MAX_ZOOM, MIN_ZOOM } from './constants'
 import { applyNodeChangesToStore, useCardNodes, type CardFlowNode } from './adapters'
 import { CardNode } from './CardNode'
 import { lastCanvasPointer } from './pointer'
 import { useCreateCard } from './useCreateCard'
+import { SelectionToolbar } from './SelectionToolbar'
 import { CARD_COLORS } from '../model/colors'
 import { useBoardStore } from '../store/boardStore'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
@@ -31,8 +32,11 @@ export function Canvas() {
     [createCard],
   )
 
-  const onNodeClick = useCallback((_: MouseEvent, node: CardFlowNode) => {
-    useBoardStore.getState().bringToFront([node.id])
+  const onNodeClick = useCallback((e: MouseEvent, node: CardFlowNode) => {
+    const store = useBoardStore.getState()
+    // A plain click (no drag) on one card of a multi-selection narrows the selection to it.
+    if (!e.shiftKey && store.selectedIds.size > 1 && store.selectedIds.has(node.id)) store.setSelection([node.id])
+    store.bringToFront([node.id])
   }, [])
 
   // Fires on pointer down (nodeDragThreshold=0). `dragged` holds every card that will
@@ -88,6 +92,7 @@ export function Canvas() {
         zoomOnDoubleClick={false}
         // Shift + drag on empty canvas draws a selection box.
         selectionKeyCode="Shift"
+        selectionMode={SelectionMode.Partial}
         multiSelectionKeyCode="Shift"
         deleteKeyCode={null}
         // We own z-order (card.zIndex); don't let React Flow bump selected nodes.
@@ -109,6 +114,7 @@ export function Canvas() {
           />
         )}
         <MinimapToggle visible={showMinimap} onToggle={() => setShowMinimap((v) => !v)} />
+        <SelectionToolbar />
         <Toolbar />
         <ZoomControls />
       </ReactFlow>

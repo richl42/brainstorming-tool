@@ -16,8 +16,10 @@ function CardNodeView({ id, data, selected, dragging }: NodeProps<CardFlowNode>)
   const [isNew] = useState(() => Date.now() - card.createdAt < 500)
 
   return (
+    // `nokey`: with Shift held React Flow would otherwise start a selection box even
+    // when pressing on a card, swallowing Shift+click (toggle selection).
     <div
-      className={`card-node ${isNew ? 'is-new' : ''} ${selected ? 'is-selected' : ''} ${dragging ? 'is-dragging' : ''} ${editing ? 'is-editing' : ''}`}
+      className={`card-node nokey ${isNew ? 'is-new' : ''} ${selected ? 'is-selected' : ''} ${dragging ? 'is-dragging' : ''} ${editing ? 'is-editing' : ''}`}
       style={{ background: palette.bg, ['--card-border' as string]: palette.border }}
       data-editing={editing || undefined}
       onDoubleClick={(e) => {

@@ -28,6 +28,28 @@ body {
 }
 
 /* React Flow overrides */
+.react-flow {
+  --xy-selection-background-color: rgb(79 107 237 / 0.08);
+  --xy-selection-border: 1px solid rgb(79 107 237 / 0.7);
+}
+
+/* After a box selection React Flow draws a draggable rect over the selected
+   cards; it would block clicking/editing individual cards. Group drag still
+   works by dragging any selected card. */
+.react-flow__nodesselection-rect {
+  display: none;
+}
+
+.selection-toolbar {
+  animation: toolbar-in 140ms ease-out;
+}
+@keyframes toolbar-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
 .react-flow__minimap {
   border-radius: 12px;
   overflow: hidden;

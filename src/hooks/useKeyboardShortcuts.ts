@@ -23,12 +23,38 @@ export function useKeyboardShortcuts() {
         return
       }
 
+      const store = useBoardStore.getState()
+
+      if (mod && !e.shiftKey && e.key.toLowerCase() === 'a') {
+        e.preventDefault()
+        store.selectAll()
+        return
+      }
+
+      if (mod && !e.shiftKey && e.key.toLowerCase() === 'd') {
+        e.preventDefault() // browser bookmark shortcut
+        if (store.selectedIds.size) store.duplicateCards(store.selectedIds)
+        return
+      }
+
+      if (!mod && (e.key === 'Delete' || e.key === 'Backspace')) {
+        if (store.selectedIds.size) {
+          e.preventDefault()
+          store.deleteCards(store.selectedIds)
+        }
+        return
+      }
+
+      if (e.key === 'Escape') {
+        store.clearSelection()
+        return
+      }
+
       // Enter edits the selected card (when exactly one is selected).
       if (!mod && e.key === 'Enter') {
-        const { selectedIds, startEditing } = useBoardStore.getState()
-        if (selectedIds.size === 1) {
+        if (store.selectedIds.size === 1) {
           e.preventDefault()
-          startEditing([...selectedIds][0])
+          store.startEditing([...store.selectedIds][0])
         }
       }
     }
