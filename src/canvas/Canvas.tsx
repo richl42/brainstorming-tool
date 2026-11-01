@@ -1,9 +1,9 @@
-import { useCallback, useState, type MouseEvent, type PointerEvent } from 'react'
+import { useCallback, useRef, useState, type MouseEvent, type PointerEvent } from 'react'
 import { Background, BackgroundVariant, MiniMap, ReactFlow, SelectionMode, type NodeTypes, type Viewport } from '@xyflow/react'
 import { MAX_ZOOM, MIN_ZOOM } from './constants'
 import { applyNodeChangesToStore, useCardNodes, type CardFlowNode } from './adapters'
 import { CardNode } from './CardNode'
-import { lastCanvasPointer } from './pointer'
+import { isDuplicateDoubleClick, lastCanvasPointer, registerTap, resetTap } from './pointer'
 import { useCreateCard } from './useCreateCard'
 import { SelectionToolbar } from './SelectionToolbar'
 import { CARD_COLORS } from '../model/colors'
@@ -29,7 +29,32 @@ export function Canvas() {
     (e: MouseEvent) => {
       // Only empty canvas; double-clicking a card is handled by the card itself.
       if (!(e.target as Element).classList.contains('react-flow__pane')) return
+      if (isDuplicateDoubleClick()) return
       createCard({ clientX: e.clientX, clientY: e.clientY })
+    },
+    [createCard],
+  )
+
+  // Touch: detect double-tap ourselves (double-tap canvas = new card, double-tap card = edit).
+  const touchStart = useRef<{ x: number; y: number } | null>(null)
+  const onPointerDown = useCallback((e: PointerEvent) => {
+    if (e.pointerType === 'touch' && e.isPrimary) touchStart.current = { x: e.clientX, y: e.clientY }
+  }, [])
+  const onPointerUp = useCallback(
+    (e: PointerEvent) => {
+      if (e.pointerType !== 'touch' || !e.isPrimary || !touchStart.current) return
+      const moved = Math.hypot(e.clientX - touchStart.current.x, e.clientY - touchStart.current.y) > 10
+      touchStart.current = null
+      if (moved) return resetTap()
+      if (!registerTap(e.clientX, e.clientY)) return
+
+      const target = e.target as Element
+      const nodeId = target.closest('.react-flow__node')?.getAttribute('data-id')
+      if (nodeId) {
+        if (!target.closest('[data-editing]')) useBoardStore.getState().startEditing(nodeId)
+      } else if (target.classList.contains('react-flow__pane')) {
+        createCard({ clientX: e.clientX, clientY: e.clientY })
+      }
     },
     [createCard],
   )
@@ -72,6 +97,8 @@ export function Canvas() {
       className="h-full w-full bg-canvas"
       onDoubleClick={onDoubleClick}
       onPointerDownCapture={onPointerDownCapture}
+      onPointerDown={onPointerDown}
+      onPointerUp={onPointerUp}
       onPointerMove={(e) => (lastCanvasPointer.current = { x: e.clientX, y: e.clientY })}
       onPointerLeave={() => (lastCanvasPointer.current = null)}
     >

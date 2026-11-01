@@ -4,6 +4,7 @@ import type { CardFlowNode } from './adapters'
 import { CARD_COLORS } from '../model/colors'
 import { MIN_CARD_HEIGHT, MIN_CARD_WIDTH } from '../model/factory'
 import { useBoardStore } from '../store/boardStore'
+import { isDuplicateDoubleClick } from './pointer'
 
 const PLACEHOLDER = 'Type an idea...'
 
@@ -14,6 +15,12 @@ function CardNodeView({ id, data, selected, dragging }: NodeProps<CardFlowNode>)
   // Only play the "appear" animation for brand-new cards, not when an existing
   // card scrolls back into view (off-screen cards are unmounted).
   const [isNew] = useState(() => Date.now() - card.createdAt < 500)
+  // The resize grip is only mounted when it can be used (hovered, or the single
+  // selected card), so big selections don't carry hundreds of resize handlers.
+  const [hovered, setHovered] = useState(false)
+  const [resizing, setResizing] = useState(false)
+  const soleSelected = useBoardStore((s) => s.selectedIds.size === 1 && s.selectedIds.has(id))
+  const showResize = !dragging && (hovered || resizing || soleSelected)
 
   return (
     // `nokey`: with Shift held React Flow would otherwise start a selection box even
@@ -22,9 +29,11 @@ function CardNodeView({ id, data, selected, dragging }: NodeProps<CardFlowNode>)
       className={`card-node nokey ${isNew ? 'is-new' : ''} ${selected ? 'is-selected' : ''} ${dragging ? 'is-dragging' : ''} ${editing ? 'is-editing' : ''}`}
       style={{ background: palette.bg, ['--card-border' as string]: palette.border }}
       data-editing={editing || undefined}
+      onPointerEnter={(e) => e.pointerType === 'mouse' && setHovered(true)}
+      onPointerLeave={() => setHovered(false)}
       onDoubleClick={(e) => {
         e.stopPropagation()
-        useBoardStore.getState().startEditing(id)
+        if (!isDuplicateDoubleClick()) useBoardStore.getState().startEditing(id)
       }}
     >
       {editing ? (
@@ -33,26 +42,42 @@ function CardNodeView({ id, data, selected, dragging }: NodeProps<CardFlowNode>)
         <div className={`card-text ${card.text ? '' : 'is-placeholder'}`}>{card.text || PLACEHOLDER}</div>
       )}
 
-      <NodeResizeControl
-        position="bottom-right"
-        className="card-resize"
-        minWidth={MIN_CARD_WIDTH}
-        minHeight={MIN_CARD_HEIGHT}
-        onResizeStart={() => {
-          const store = useBoardStore.getState()
-          store.stopEditing()
-          store.bringToFront([id])
-          store.beginGesture('resize') // the whole resize is one undo step
-        }}
-        onResizeEnd={() => useBoardStore.getState().endGesture('resize')}
-      >
-        <svg viewBox="0 0 10 10" aria-hidden>
-          <path d="M9 3 L3 9 M9 6.5 L6.5 9" />
-        </svg>
-      </NodeResizeControl>
+      {showResize && <ResizeGrip id={id} onResizingChange={setResizing} />}
     </div>
   )
 }
+
+const ResizeGrip = memo(function ResizeGrip({
+  id,
+  onResizingChange,
+}: {
+  id: string
+  onResizingChange: (resizing: boolean) => void
+}) {
+  return (
+    <NodeResizeControl
+      position="bottom-right"
+      className="card-resize"
+      minWidth={MIN_CARD_WIDTH}
+      minHeight={MIN_CARD_HEIGHT}
+      onResizeStart={() => {
+        onResizingChange(true)
+        const store = useBoardStore.getState()
+        store.stopEditing()
+        store.bringToFront([id])
+        store.beginGesture('resize') // the whole resize is one undo step
+      }}
+      onResizeEnd={() => {
+        onResizingChange(false)
+        useBoardStore.getState().endGesture('resize')
+      }}
+    >
+      <svg viewBox="0 0 10 10" aria-hidden>
+        <path d="M9 3 L3 9 M9 6.5 L6.5 9" />
+      </svg>
+    </NodeResizeControl>
+  )
+})
 
 function CardTextEditor({ id, text, height }: { id: string; text: string; height: number }) {
   const ref = useRef<HTMLTextAreaElement>(null)
@@ -97,4 +122,23 @@ function CardTextEditor({ id, text, height }: { id: string; text: string; height
   )
 }
 
-export const CardNode = memo(CardNodeView)
+/**
+ * Re-render only when something the card *displays* changes. Position is applied
+ * by React Flow's node wrapper, so moving a card (or 300 of them) skips this
+ * component entirely.
+ */
+function propsEqual(a: NodeProps<CardFlowNode>, b: NodeProps<CardFlowNode>) {
+  const ca = a.data.card
+  const cb = b.data.card
+  return (
+    a.id === b.id &&
+    a.selected === b.selected &&
+    a.dragging === b.dragging &&
+    ca.text === cb.text &&
+    ca.color === cb.color &&
+    ca.width === cb.width &&
+    ca.height === cb.height
+  )
+}
+
+export const CardNode = memo(CardNodeView, propsEqual)

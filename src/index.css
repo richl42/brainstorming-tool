@@ -149,6 +149,12 @@ textarea.card-text::placeholder {
   }
 }
 
+/* Cards being dragged get their own compositor layer so moving them doesn't
+   repaint the rest of the board. */
+.react-flow__node.dragging {
+  will-change: transform;
+}
+
 /* Resize grip: bottom-right corner, visible on hover / selection. */
 .react-flow__resize-control.handle.card-resize {
   width: 18px;

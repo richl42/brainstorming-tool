@@ -100,15 +100,15 @@ function toMap(cards: Card[]): CardMap {
 const initial = createBoard()
 
 export const useBoardStore = create<BoardState>()((set, get) => {
-  /**
-   * Central write path for document changes. Every content mutation goes
-   * through here, which makes it the natural hook point for undo history
-   * (step 5) and, later, for broadcasting changes to collaborators.
-   */
   const history = new History()
   const snapshot = (): DocSnapshot => ({ cards: get().cards, title: get().title })
   const historyFlags = () => ({ canUndo: history.canUndo, canRedo: history.canRedo })
 
+  /**
+   * Central write path for document changes. Every content mutation goes
+   * through here: it records undo history today, and is the place to
+   * broadcast changes to collaborators when multiplayer is added.
+   */
   const commitDoc = (doc: Partial<DocSnapshot>, extra: Partial<BoardState> = {}) => {
     history.willChange(snapshot())
     set({ ...doc, updatedAt: Date.now(), ...extra, ...historyFlags() })
