@@ -31,6 +31,21 @@ export function Canvas() {
     [createCard],
   )
 
+  const onNodeClick = useCallback((_: MouseEvent, node: CardFlowNode) => {
+    useBoardStore.getState().bringToFront([node.id])
+  }, [])
+
+  // Fires on pointer down (nodeDragThreshold=0). `dragged` holds every card that will
+  // move (the whole selection when grabbing a selected card). The lift effect is
+  // switched on by the first real position change, see applyNodeChangesToStore.
+  const onNodeDragStart = useCallback((_: unknown, _node: CardFlowNode, dragged: CardFlowNode[]) => {
+    const store = useBoardStore.getState()
+    store.stopEditing()
+    store.bringToFront(dragged.map((n) => n.id))
+  }, [])
+
+  const onNodeDragStop = useCallback(() => useBoardStore.getState().setDragging([]), [])
+
   // React Flow's pan handler swallows mousedown, so a click on the canvas would not
   // blur the card being edited. End editing explicitly on any outside pointer down.
   const onPointerDownCapture = useCallback((e: PointerEvent) => {
@@ -52,6 +67,12 @@ export function Canvas() {
         edges={[]}
         nodeTypes={nodeTypes}
         onNodesChange={applyNodeChangesToStore}
+        onNodeClick={onNodeClick}
+        onNodeDragStart={onNodeDragStart}
+        onNodeDragStop={onNodeDragStop}
+        // Start drags immediately so the card tracks the pointer exactly
+        // (a threshold makes React Flow drop the first few pixels of movement).
+        nodeDragThreshold={0}
         minZoom={MIN_ZOOM}
         maxZoom={MAX_ZOOM}
         defaultViewport={{ x: 0, y: 0, zoom: 1 }}

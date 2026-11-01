@@ -126,3 +126,39 @@ textarea.card-text::placeholder {
     transition: none;
   }
 }
+
+/* Resize grip: bottom-right corner, visible on hover / selection. */
+.react-flow__resize-control.handle.card-resize {
+  width: 18px;
+  height: 18px;
+  translate: -100% -100%;
+  background: none;
+  border: 0;
+  border-radius: 0 0 10px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+.react-flow__resize-control.card-resize svg {
+  width: 10px;
+  height: 10px;
+  fill: none;
+  stroke: rgb(31 35 40 / 0.4);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+.card-node:hover .card-resize,
+.card-node.is-selected .card-resize {
+  opacity: 1;
+}
+.card-node.is-dragging .card-resize {
+  opacity: 0;
+}
+@media (hover: none) {
+  .card-node.is-selected .card-resize {
+    width: 28px;
+    height: 28px;
+  }
+}

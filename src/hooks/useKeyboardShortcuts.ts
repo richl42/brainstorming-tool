@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useCreateCard } from '../canvas/useCreateCard'
+import { useBoardStore } from '../store/boardStore'
 
 /** True when the event target is somewhere the user types (so shortcuts must not fire). */
 export function isTypingTarget(target: EventTarget | null): boolean {
@@ -19,6 +20,16 @@ export function useKeyboardShortcuts() {
       if (!mod && !e.altKey && e.key.toLowerCase() === 'n') {
         e.preventDefault() // don't type "n" into the freshly focused card
         createCard('pointer')
+        return
+      }
+
+      // Enter edits the selected card (when exactly one is selected).
+      if (!mod && e.key === 'Enter') {
+        const { selectedIds, startEditing } = useBoardStore.getState()
+        if (selectedIds.size === 1) {
+          e.preventDefault()
+          startEditing([...selectedIds][0])
+        }
       }
     }
     window.addEventListener('keydown', onKeyDown)

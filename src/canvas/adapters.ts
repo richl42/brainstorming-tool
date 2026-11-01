@@ -73,11 +73,13 @@ export function applyNodeChangesToStore(changes: NodeChange<CardFlowNode>[]) {
   const store = useBoardStore.getState()
   let moves: Record<CardId, { x: number; y: number }> | null = null
   let selection: Set<CardId> | null = null
+  let dragging: Set<CardId> | null = null
 
   for (const change of changes) {
     switch (change.type) {
       case 'position':
         if (change.position) (moves ??= {})[change.id] = { x: change.position.x, y: change.position.y }
+        if (change.dragging) (dragging ??= new Set()).add(change.id)
         break
       case 'dimensions':
         if (change.resizing && change.dimensions) {
@@ -93,5 +95,6 @@ export function applyNodeChangesToStore(changes: NodeChange<CardFlowNode>[]) {
   }
 
   if (moves) store.moveCards(moves)
+  if (dragging) store.setDragging(dragging)
   if (selection) store.setSelection(selection)
 }
