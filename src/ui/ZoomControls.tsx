@@ -2,11 +2,13 @@ import { Panel, useReactFlow, useStore } from '@xyflow/react'
 import { Maximize, Minus, Plus } from 'lucide-react'
 import { FloatingPanel, IconButton } from './IconButton'
 import { MAX_ZOOM, MIN_ZOOM, ZOOM_STEP_DURATION } from '../canvas/constants'
+import { useBoardCommands } from '../canvas/useBoardCommands'
 
 const zoomSelector = (s: { transform: [number, number, number] }) => s.transform[2]
 
 export function ZoomControls() {
-  const { zoomIn, zoomOut, fitView, zoomTo } = useReactFlow()
+  const { zoomIn, zoomOut, zoomTo } = useReactFlow()
+  const { fitAll } = useBoardCommands()
   const zoom = useStore(zoomSelector)
   const pct = Math.round(zoom * 100)
 
@@ -29,7 +31,7 @@ export function ZoomControls() {
           <Plus size={16} />
         </IconButton>
         <div className="mx-0.5 h-5 w-px bg-gray-200" />
-        <IconButton label="Fit all cards (Shift+1)" onClick={() => fitView({ padding: 0.2, duration: 300, maxZoom: 1.5 })}>
+        <IconButton label="Fit all cards (Shift+1)" onClick={fitAll}>
           <Maximize size={15} />
         </IconButton>
       </FloatingPanel>

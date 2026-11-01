@@ -184,3 +184,50 @@ textarea.card-text::placeholder {
     height: 28px;
   }
 }
+
+/* Phones/tablets: toolbar spans from the left edge to the "?" button. */
+@media (max-width: 767px) {
+  .react-flow__panel.top.center.main-toolbar {
+    left: 16px;
+    right: 64px;
+    transform: none;
+  }
+  .main-toolbar > div {
+    width: 100%;
+  }
+}
+
+/* Auto-sizing title input (see BoardTitle). */
+.board-title > input,
+.board-title::after {
+  grid-area: 1 / 1;
+}
+.board-title::after {
+  content: attr(data-value);
+  visibility: hidden;
+  white-space: pre;
+  overflow: hidden;
+  padding: 0 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  height: 0;
+}
+
+/* Dialogs */
+.dialog-backdrop {
+  animation: fade-in 120ms ease-out;
+}
+.dialog-panel {
+  animation: dialog-in 160ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}

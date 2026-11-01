@@ -1,5 +1,7 @@
 import { useEffect } from 'react'
 import { useCreateCard } from '../canvas/useCreateCard'
+import { useBoardCommands } from '../canvas/useBoardCommands'
+import { useUiStore } from '../store/uiStore'
 import { useBoardStore } from '../store/boardStore'
 
 /** True when the event target is somewhere the user types (so shortcuts must not fire). */
@@ -11,11 +13,26 @@ export function isTypingTarget(target: EventTarget | null): boolean {
 
 export function useKeyboardShortcuts() {
   const createCard = useCreateCard()
+  const { fitAll } = useBoardCommands()
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.defaultPrevented || isTypingTarget(e.target)) return
+      if (useUiStore.getState().dialog) return // dialogs handle their own keys
       const mod = e.metaKey || e.ctrlKey
+
+      if (!mod && e.key === '?') {
+        e.preventDefault()
+        useUiStore.getState().openDialog({ kind: 'shortcuts' })
+        return
+      }
+
+      // Shift+1 (use the physical key: Shift+1 types "!" on US layouts, other symbols elsewhere).
+      if (!mod && e.shiftKey && e.code === 'Digit1') {
+        e.preventDefault()
+        fitAll()
+        return
+      }
 
       if (!mod && !e.altKey && e.key.toLowerCase() === 'n') {
         e.preventDefault() // don't type "n" into the freshly focused card
@@ -73,5 +90,5 @@ export function useKeyboardShortcuts() {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [createCard])
+  }, [createCard, fitAll])
 }

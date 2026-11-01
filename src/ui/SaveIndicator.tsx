@@ -7,7 +7,7 @@ export function SaveIndicator() {
 
   return (
     <div
-      className={`pointer-events-none fixed top-4 left-4 z-10 flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium transition-colors ${
+      className={`pointer-events-none fixed top-[68px] left-4 z-10 md:top-4 flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium transition-colors ${
         status === 'error' ? 'bg-red-50 text-red-700 shadow-float' : 'text-gray-500'
       }`}
       role="status"

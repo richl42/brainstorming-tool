@@ -12,6 +12,7 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import { ZoomControls } from '../ui/ZoomControls'
 import { MinimapToggle } from '../ui/MinimapToggle'
 import { Toolbar } from '../ui/Toolbar'
+import { HelpButton } from '../ui/HelpButton'
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
 const nodeTypes: NodeTypes = { card: CardNode }
@@ -127,6 +128,7 @@ export function Canvas() {
         <SelectionToolbar />
         <Toolbar />
         <ZoomControls />
+        <HelpButton />
       </ReactFlow>
     </div>
   )

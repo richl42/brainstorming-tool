@@ -5,6 +5,7 @@ import { useBoardStore } from './store/boardStore'
 import { storage } from './storage'
 import { useAutosave } from './hooks/useAutosave'
 import { SaveIndicator } from './ui/SaveIndicator'
+import { DialogHost } from './ui/DialogHost'
 
 export default function App() {
   const [ready, setReady] = useState(false)
@@ -35,6 +36,7 @@ function Board() {
     <ReactFlowProvider>
       <Canvas />
       <SaveIndicator />
+      <DialogHost />
     </ReactFlowProvider>
   )
 }
