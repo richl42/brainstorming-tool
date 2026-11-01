@@ -1,5 +1,5 @@
 import { useCallback, useState, type MouseEvent, type PointerEvent } from 'react'
-import { Background, BackgroundVariant, MiniMap, ReactFlow, SelectionMode, type NodeTypes } from '@xyflow/react'
+import { Background, BackgroundVariant, MiniMap, ReactFlow, SelectionMode, type NodeTypes, type Viewport } from '@xyflow/react'
 import { MAX_ZOOM, MIN_ZOOM } from './constants'
 import { applyNodeChangesToStore, useCardNodes, type CardFlowNode } from './adapters'
 import { CardNode } from './CardNode'
@@ -19,6 +19,7 @@ const minimapColor = (n: CardFlowNode) => CARD_COLORS[n.data.card.color].border
 
 export function Canvas() {
   const [showMinimap, setShowMinimap] = useState(() => window.innerWidth >= 768)
+  const [initialViewport] = useState(() => useBoardStore.getState().viewport)
   const nodes = useCardNodes()
   const createCard = useCreateCard()
   useKeyboardShortcuts()
@@ -55,6 +56,8 @@ export function Canvas() {
     store.setDragging([])
   }, [])
 
+  const onMoveEnd = useCallback((_: unknown, viewport: Viewport) => useBoardStore.getState().setViewport(viewport), [])
+
   // React Flow's pan handler swallows mousedown, so a click on the canvas would not
   // blur the card being edited. End editing explicitly on any outside pointer down.
   const onPointerDownCapture = useCallback((e: PointerEvent) => {
@@ -84,7 +87,9 @@ export function Canvas() {
         nodeDragThreshold={0}
         minZoom={MIN_ZOOM}
         maxZoom={MAX_ZOOM}
-        defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+        // Start where the user left off; remember the camera after every pan/zoom.
+        defaultViewport={initialViewport}
+        onMoveEnd={onMoveEnd}
         // Pan: drag empty space, Space + drag, or two-finger trackpad scroll.
         panOnDrag
         panActivationKeyCode="Space"

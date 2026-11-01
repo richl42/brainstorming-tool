@@ -11,16 +11,18 @@ export const DEFAULT_BOARD_TITLE = 'Untitled board'
 export const newId = () => nanoid(12)
 
 export function createCard(init: Partial<Card> & Pick<Card, 'x' | 'y'>, now = Date.now()): Card {
+  // Explicit field order keeps saved/exported JSON canonical and diff-friendly.
   return {
-    id: newId(),
-    text: '',
-    color: DEFAULT_CARD_COLOR,
-    width: DEFAULT_CARD_WIDTH,
-    height: DEFAULT_CARD_HEIGHT,
-    zIndex: 0,
-    createdAt: now,
-    updatedAt: now,
-    ...init,
+    id: init.id ?? newId(),
+    text: init.text ?? '',
+    color: init.color ?? DEFAULT_CARD_COLOR,
+    x: init.x,
+    y: init.y,
+    width: init.width ?? DEFAULT_CARD_WIDTH,
+    height: init.height ?? DEFAULT_CARD_HEIGHT,
+    zIndex: init.zIndex ?? 0,
+    createdAt: init.createdAt ?? now,
+    updatedAt: init.updatedAt ?? init.createdAt ?? now,
   }
 }
 

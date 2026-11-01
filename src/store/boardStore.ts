@@ -238,7 +238,10 @@ export const useBoardStore = create<BoardState>()((set, get) => {
       if (clean !== get().title) commitDoc({ title: clean })
     },
 
-    setViewport: (viewport) => set({ viewport }),
+    setViewport: (viewport) => {
+      const v = get().viewport
+      if (v.x !== viewport.x || v.y !== viewport.y || v.zoom !== viewport.zoom) set({ viewport: { ...viewport } })
+    },
 
     clearBoard: () => commitCards({}, { selectedIds: EMPTY_SET, editingId: null, draggingIds: EMPTY_SET }),
 
