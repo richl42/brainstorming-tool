@@ -25,6 +25,19 @@ export function useKeyboardShortcuts() {
 
       const store = useBoardStore.getState()
 
+      // Undo: Cmd/Ctrl+Z. Redo: Cmd/Ctrl+Shift+Z (and Ctrl+Y, the Windows convention).
+      if (mod && e.key.toLowerCase() === 'z') {
+        e.preventDefault()
+        if (e.shiftKey) store.redo()
+        else store.undo()
+        return
+      }
+      if (mod && !e.shiftKey && e.key.toLowerCase() === 'y') {
+        e.preventDefault()
+        store.redo()
+        return
+      }
+
       if (mod && !e.shiftKey && e.key.toLowerCase() === 'a') {
         e.preventDefault()
         store.selectAll()

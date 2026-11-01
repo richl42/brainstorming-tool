@@ -46,9 +46,14 @@ export function Canvas() {
     const store = useBoardStore.getState()
     store.stopEditing()
     store.bringToFront(dragged.map((n) => n.id))
+    store.beginGesture('drag') // the whole drag is one undo step
   }, [])
 
-  const onNodeDragStop = useCallback(() => useBoardStore.getState().setDragging([]), [])
+  const onNodeDragStop = useCallback(() => {
+    const store = useBoardStore.getState()
+    store.endGesture('drag')
+    store.setDragging([])
+  }, [])
 
   // React Flow's pan handler swallows mousedown, so a click on the canvas would not
   // blur the card being edited. End editing explicitly on any outside pointer down.

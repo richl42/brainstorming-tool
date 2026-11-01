@@ -13,6 +13,7 @@ import { create } from 'zustand'
 import type { Board, BoardId, Card, CardId, CardPatch, Viewport } from '../model/types'
 import { createBoard, createCard as makeCard, DEFAULT_BOARD_TITLE, newId } from '../model/factory'
 import type { CardColor } from '../model/colors'
+import { History, type DocSnapshot, type GestureKind } from './history'
 
 export type CardMap = Record<CardId, Card>
 export type IdSet = ReadonlySet<CardId>
@@ -31,6 +32,8 @@ export interface BoardState {
   selectedIds: IdSet
   editingId: CardId | null
   draggingIds: IdSet
+  canUndo: boolean
+  canRedo: boolean
 
   // ── Card actions ────────────────────────────────────────────────────────
   /** Create a card. `x`/`y` are its top-left corner in canvas coordinates. */
@@ -55,6 +58,16 @@ export interface BoardState {
   loadBoard: (board: Board) => void
   /** Snapshot the document in its serialized form. */
   getBoard: () => Board
+
+  // ── History ─────────────────────────────────────────────────────────────
+  undo: () => void
+  redo: () => void
+  /**
+   * Group every change until endGesture into a single undo step
+   * (used for drags, resizes and text editing).
+   */
+  beginGesture: (kind: GestureKind) => void
+  endGesture: (kind: GestureKind) => void
 
   // ── Session actions ─────────────────────────────────────────────────────
   setSelection: (ids: Iterable<CardId>) => void
@@ -92,8 +105,29 @@ export const useBoardStore = create<BoardState>()((set, get) => {
    * through here, which makes it the natural hook point for undo history
    * (step 5) and, later, for broadcasting changes to collaborators.
    */
-  const commitCards = (next: CardMap, extra: Partial<BoardState> = {}) => {
-    set({ cards: next, updatedAt: Date.now(), ...extra })
+  const history = new History()
+  const snapshot = (): DocSnapshot => ({ cards: get().cards, title: get().title })
+  const historyFlags = () => ({ canUndo: history.canUndo, canRedo: history.canRedo })
+
+  const commitDoc = (doc: Partial<DocSnapshot>, extra: Partial<BoardState> = {}) => {
+    history.willChange(snapshot())
+    set({ ...doc, updatedAt: Date.now(), ...extra, ...historyFlags() })
+  }
+  const commitCards = (next: CardMap, extra: Partial<BoardState> = {}) => commitDoc({ cards: next }, extra)
+
+  /** Restore a snapshot from undo/redo, dropping session state that no longer applies. */
+  const restore = (doc: DocSnapshot | null) => {
+    if (!doc) return
+    const { selectedIds } = get()
+    set({
+      cards: doc.cards,
+      title: doc.title,
+      updatedAt: Date.now(),
+      selectedIds: new Set([...selectedIds].filter((id) => id in doc.cards)),
+      editingId: null,
+      draggingIds: EMPTY_SET,
+      ...historyFlags(),
+    })
   }
 
   const patchCards = (patches: Record<CardId, CardPatch>) => {
@@ -119,6 +153,8 @@ export const useBoardStore = create<BoardState>()((set, get) => {
     selectedIds: EMPTY_SET,
     editingId: null,
     draggingIds: EMPTY_SET,
+    canUndo: false,
+    canRedo: false,
 
     createCard: (init, opts = {}) => {
       const { cards } = get()
@@ -130,6 +166,8 @@ export const useBoardStore = create<BoardState>()((set, get) => {
           ...(opts.edit ? { editingId: card.id } : {}),
         },
       )
+      // Typing into a just-created card belongs to the same undo step as creating it.
+      if (opts.edit) history.beginGesture('edit', snapshot(), true)
       return card
     },
 
@@ -197,14 +235,15 @@ export const useBoardStore = create<BoardState>()((set, get) => {
 
     setTitle: (title) => {
       const clean = title.trim() || DEFAULT_BOARD_TITLE
-      if (clean !== get().title) set({ title: clean, updatedAt: Date.now() })
+      if (clean !== get().title) commitDoc({ title: clean })
     },
 
     setViewport: (viewport) => set({ viewport }),
 
     clearBoard: () => commitCards({}, { selectedIds: EMPTY_SET, editingId: null, draggingIds: EMPTY_SET }),
 
-    loadBoard: (board) =>
+    loadBoard: (board) => {
+      history.clear()
       set({
         id: board.id,
         title: board.title,
@@ -214,7 +253,9 @@ export const useBoardStore = create<BoardState>()((set, get) => {
         selectedIds: EMPTY_SET,
         editingId: null,
         draggingIds: EMPTY_SET,
-      }),
+        ...historyFlags(),
+      })
+    },
 
     getBoard: () => {
       const { id, title, cards, viewport, updatedAt } = get()
@@ -236,8 +277,18 @@ export const useBoardStore = create<BoardState>()((set, get) => {
       if (get().selectedIds.size) set({ selectedIds: EMPTY_SET })
     },
 
-    startEditing: (id) => set({ editingId: id, selectedIds: new Set([id]) }),
+    undo: () => restore(history.undo(snapshot())),
+    redo: () => restore(history.redo(snapshot())),
+    beginGesture: (kind) => history.beginGesture(kind, snapshot()),
+    endGesture: (kind) => history.endGesture(kind),
+
+    startEditing: (id) => {
+      if (!(id in get().cards)) return
+      history.beginGesture('edit', snapshot())
+      set({ editingId: id, selectedIds: new Set([id]) })
+    },
     stopEditing: () => {
+      history.endGesture('edit')
       if (get().editingId) set({ editingId: null })
     },
 

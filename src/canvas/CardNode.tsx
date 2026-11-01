@@ -38,7 +38,13 @@ function CardNodeView({ id, data, selected, dragging }: NodeProps<CardFlowNode>)
         className="card-resize"
         minWidth={MIN_CARD_WIDTH}
         minHeight={MIN_CARD_HEIGHT}
-        onResizeStart={() => useBoardStore.getState().bringToFront([id])}
+        onResizeStart={() => {
+          const store = useBoardStore.getState()
+          store.stopEditing()
+          store.bringToFront([id])
+          store.beginGesture('resize') // the whole resize is one undo step
+        }}
+        onResizeEnd={() => useBoardStore.getState().endGesture('resize')}
       >
         <svg viewBox="0 0 10 10" aria-hidden>
           <path d="M9 3 L3 9 M9 6.5 L6.5 9" />
